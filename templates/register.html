@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Log In
+{% endblock %}
+
+{% block main %}
+<form action="/register" method="post">
+    <div class="form-group">
+        <label for="username">Username</label>
+        <input id="username" autocomplete="off" autofocus class="form-control" name="username" placeholder="Username" type="text">
+        <div class="invalid-feedback" id="username-feedback"></div>
+    </div>
+    <div class="form-group">
+        <label for="password">Password</label>
+        <input id="password" class="form-control" name="password" placeholder="Password" type="password">
+    </div>
+    <div class="form-group">
+        <label for="con-password">Confirmation Password</label>
+        <input id="con-password" class="form-control" name="confirmation" placeholder="Confirmation Password" type="password">
+        <div class="valid-feedback" id="password-feedback"></div>
+    </div>
+    <button class="btn btn-primary" type="submit">Log In</button>
+</form>
+
+<script>
+let usernameInput = document.getElementById('username');
+let usernameFeedback = document.getElementById('username-feedback');
+let passwordFeedback = document.getElementById('password-feedback');  // For future password validation
+
+usernameInput.onkeyup = function() {
+    $.get('/check?q=' + usernameInput.value, function(data) {
+        if (data) { // Username already exists (data is true)
+            usernameInput.classList.add('is-invalid');
+            usernameFeedback.textContent = "This username is already in use.";
+        } else {
+            usernameInput.classList.remove('is-invalid');
+            usernameFeedback.textContent = "";
+        }
+    });
+};
+
+// Add password validation logic here if needed (optional)
+
+let input_pass = document.querySelector('#password');
+let input_con_pass = document.querySelector('#con-password');
+
+input_pass.onkeyup = function() {
+    if (input_pass.value === input_con_pass.value && input_pass.value.length > 0) {
+        passwordFeedback.textContent = "The passwords match.";
+    } else {
+        passwordFeedback.textContent = "";
+    }
+};
+
+input_con_pass.onkeyup = function() {
+    if (input_pass.value === input_con_pass.value && input_con_pass.value.length > 0) {
+        passwordFeedback.textContent = "The passwords match.";
+    } else {
+        passwordFeedback.textContent = "";
+    }
+};
+</script>
+{% endblock %}

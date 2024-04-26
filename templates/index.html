@@ -1,0 +1,59 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Current assets
+{% endblock %}
+
+{% block main %}
+    
+    <table class="table table-striped">
+        <th>
+            
+            <td>
+                Symbol
+            </td>
+            <td>
+                Company Name
+            </td>
+            <td>
+                Price
+            </td>
+            <td>
+                Current amount
+            </td>
+            <td>
+                Shares
+            </td>
+            
+        </th>
+        
+            
+            {% for i in range(len_ls) %}
+                <tr>
+                <td>
+                    {{i + 1}}
+                </td>
+                <td>
+                    {{ind_ls[i]['symbol']}}
+                </td>
+                <td>
+                    {{ind_ls[i]['company']}}
+                </td>
+                <td>
+                    {{ind_ls[i]['price']}}
+                </td>
+                <td>
+                    {{ind_ls[i]['new_amount']}}
+                </td>
+                <td>
+                    {{ind_ls[i]['number']}}
+                </td>
+            </tr>
+            {% endfor %}
+        
+    </table>
+
+    <h2>The current amount on the account: {{wlt}}.</h2>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+{% endblock %}
