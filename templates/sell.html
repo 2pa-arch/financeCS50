@@ -7,7 +7,13 @@
 {% block main %}
     <form action="/sell" method="post">
         <div class="form-group">
-            <input id="symbol" autocomplete="off" autofocus class="form-control" name="symbol" placeholder="Symbol" type="text">
+            <select name="symbol" id="cars">
+                {% for op in op_list %}
+                    <option value= {{op['symbols']}} >{{op['symbols']}}</option>
+                {% endfor %}
+                
+                
+              </select>
         </div>
         <div class="form-group">
             <input id="shares" autocomplete="off" autofocus class="form-control" name="shares" placeholder="shares" type="numberic">
