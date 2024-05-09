@@ -1,9 +1,11 @@
 import requests
 import urllib.parse
-
+import uuid
 from flask import redirect, render_template, request, session
 from functools import wraps
 import os
+from datetime import datetime
+import pytz
 
 def apology(message, code=400):
     """Render message as an apology to user."""
@@ -14,7 +16,7 @@ def apology(message, code=400):
         https://github.com/jacebrowning/memegen#special-characters
         """
         for old, new in [("-", "--"), (" ", "-"), ("_", "__"), ("?", "~q"),
-                         ("%", "~p"), ("#", "~h"), ("/", "~s"), ("\"", "''")]:
+                        ("%", "~p"), ("#", "~h"), ("/", "~s"), ("\"", "''")]:
             s = s.replace(old, new)
         return s
     return render_template("apology.html", top=code, bottom=escape(message)), code
@@ -39,21 +41,30 @@ def lookup(symbol):
 
     # Contact API
     try:
-        response = requests.get(f"https://cloud.iexapis.com/stable/stock/{urllib.parse.quote_plus(symbol)}/quote?token={os.getenv('API_KEY')}")
-        #response = request.get_json(f"https://api.iextrading.com/1.0/stock/{urllib.parse.quote_plus(symbol)}/quote")
-        response.raise_for_status()
+
+        response1 = requests.get(
+            f"https://query1.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote_plus(symbol)}",
+            headers={"User-Agent": "Mozilla/5.0 (platform; rv:geckoversion) Gecko/geckotrail Firefox/firefoxversion"},)
+        response2 = requests.get(
+            f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote_plus(symbol)}?metrics=high?&interval=1m",
+            headers={"User-Agent": "Mozilla/5.0 (platform; rv:geckoversion) Gecko/geckotrail Firefox/firefoxversion"},)
+        
+        response1.raise_for_status()
+        response2.raise_for_status()
     except requests.RequestException:
         return None
     
     # Parse response
     try:
-        quote = response.json()
+        quote1 = response1.json()
+        quote2 = response2.json()
         return {
-            "name": quote["companyName"],
-            "price": float(quote["latestPrice"]),
-            "symbol": quote["symbol"]
+            "name": quote1['quotes'][0]['longname'],
+            "price": float(quote2['chart']['result'][0]['meta']['regularMarketPrice']),
+            "symbol": quote1['quotes'][0]['symbol']
         }
     except (KeyError, TypeError, ValueError):
+        print(response1)
         return None
 
 
