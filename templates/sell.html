@@ -9,11 +9,11 @@
         <div class="form-group">
             <select name="symbol" id="cars">
                 {% for op in op_list %}
-                    <option value= {{op['symbols']}} >{{op['symbols']}}</option>
+                    <option value= {{op[0]}} >{{op[0]}}</option>
                 {% endfor %}
                 
                 
-              </select>
+            </select>
         </div>
         <div class="form-group">
             <input id="shares" autocomplete="off" autofocus class="form-control" name="shares" placeholder="shares" type="numberic">
