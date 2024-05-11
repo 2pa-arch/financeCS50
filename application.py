@@ -74,9 +74,9 @@ def index():
 
             
             am = db.execute("SELECT SUM(amount) FROM transactions WHERE symbol_id = :symbol_id AND user_id = :user_id ",
-                             symbol_id = tr['symbol_id'],
-                             user_id = session['user_id']
-                             )[0]['SUM(amount)']
+                            symbol_id = tr['symbol_id'],
+                            user_id = session['user_id']
+                            )[0]['SUM(amount)']
 
             new_am =float(num) * new_inf['price']
 
@@ -143,14 +143,14 @@ def buy():
         symbol_id =db.execute("SELECT id FROM symbols WHERE symbols = :symbols", symbols=ls['symbol'])[0]['id']
 
         db.execute("""INSERT  INTO transactions( user_id, symbol_id, number, amount, date, purchase_sale )
-                     VALUES( :user_id, :symbol_id, :number, :amount, :date, :purchase_sale)""",
-                   user_id = session['user_id'],
-                   symbol_id = symbol_id,
-                   number = num,
-                   amount = am,
-                   date = datetime.now(),
-                   purchase_sale = "buy"
-                   )
+                    VALUES( :user_id, :symbol_id, :number, :amount, :date, :purchase_sale)""",
+                    user_id = session['user_id'],
+                    symbol_id = symbol_id,
+                    number = num,
+                    amount = am,
+                    date = datetime.now(),
+                    purchase_sale = "buy"
+                    )
 
         db.execute("UPDATE users SET cash = :cash WHERE id = :user_id" , cash = wlt, user_id = session['user_id'])
 
@@ -197,10 +197,10 @@ def history():
         
         num = tr['number']
         
-     
+
         am = tr['amount']
 
-      
+
         ind_ls.append({
             'price' : usd(am/num),
             'amount' : usd(am),
@@ -241,7 +241,7 @@ def login():
 
         # Query database for username
         rows = db.execute("SELECT * FROM users WHERE username = :username",
-                          username=request.form.get("username"))
+                            username=request.form.get("username"))
 
         # Ensure username exists and password is correct
         if len(rows) != 1 or not check_password_hash(rows[0]["hash"], request.form.get("password")):
@@ -286,7 +286,7 @@ def quote():
             return apology("Not found symbol:(")
     else:
         return render_template("quote.html")
-   
+
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -294,7 +294,7 @@ def register():
 
     if request.method == "POST":
 
-         # Ensure username was submitted
+        # Ensure username was submitted
         if not request.form.get("username"):
             return apology("must provide username")
 
@@ -322,7 +322,7 @@ def register():
         
 
         rows = db.execute("SELECT * FROM users WHERE username = :username",
-                          username=request.form.get("username"))
+                            username=request.form.get("username"))
 
 
         # Remember which user has logged in
@@ -391,14 +391,14 @@ def sell():
         symbol_id =db.execute("SELECT id FROM symbols WHERE symbols = :symbols", symbols=ls['symbol'])[0]['id']
 
         db.execute("""INSERT  INTO transactions( user_id, symbol_id, number, amount, date, purchase_sale )
-                     VALUES( :user_id, :symbol_id, :number, :amount, :date, :purchase_sale)""",
-                   user_id = session['user_id'],
-                   symbol_id = symbol_id,
-                   number = num,
-                   amount = am,
-                   date = datetime.now(),
-                   purchase_sale = "sell"
-                   )
+                    VALUES( :user_id, :symbol_id, :number, :amount, :date, :purchase_sale)""",
+                    user_id = session['user_id'],
+                    symbol_id = symbol_id,
+                    number = num,
+                    amount = am,
+                    date = datetime.now(),
+                    purchase_sale = "sell"
+                    )
 
         db.execute("UPDATE users SET cash = :cash WHERE id = :user_id" , cash = wlt, user_id = session['user_id'])
 
