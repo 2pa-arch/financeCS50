@@ -4,6 +4,7 @@ PATH_TO_FILE = "create_db.sql"
 
 
 def check_create_db():
+    print("AAAAAAA")
     mydb = mysql.connector.connect(
         host="localhost",
         user="root",

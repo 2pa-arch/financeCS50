@@ -16,6 +16,8 @@ app = Flask(__name__)
 # Ensure templates are auto-reloaded
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
+
+
 # Ensure responses aren't cached
 @app.after_request
 def after_request(response):
@@ -455,11 +457,9 @@ for code in default_exceptions:
 
 
 
-if __name__ == "__main__":
-
-    container_id = start_db()
+if __name__ == "__main__":    
+    
     check_create_db()
     
     app.run(debug=True)
     
-    print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
