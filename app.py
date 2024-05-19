@@ -310,6 +310,7 @@ def register():
 @login_required
 def sell():
     """Sell shares of stock"""
+    user = User(id=session['user_id'])
     if request.method == "POST":
         
         if not request.form.get("shares"):
@@ -323,70 +324,52 @@ def sell():
             return apology("Netive")
         
         if not request.form.get("symbol"):
-            return apology("Did not enter a symbol.") 
-        mycursor.execute("SELECT * FROM symbols WHERE symbols = %s", ( request.form.get("symbol").upper(),) )
-        rows = mycursor.fetchall()
-        if rows:
+            return apology("Did not enter a symbol.")
+        
+        symbol = Symbol(symbol=request.form.get("symbol").upper())
+        
+        if symbol.company == None:
             apology("You dont have this symbol or symbol not found.")
-        print(rows)
-        mycursor.execute("SELECT SUM(number) FROM transactions WHERE user_id = %s AND purchase_sale = 'buy' AND symbol_id = %s",
-                            ( session['user_id'],
-                            rows[0][0])
-                            )
-        num_buy = mycursor.fetchall()[0][0]
-        mycursor.execute("SELECT SUM(number) FROM transactions WHERE user_id = %s AND purchase_sale = 'sell' AND symbol_id = %s",
-                            ( session['user_id'],
-                            rows[0][0])
-                            )
-        num_sell = mycursor.fetchall()[0][0]
         
-
-        if not num_sell:
-            num_sell = 0
+        
         num = int(request.form.get("shares"))
-        if num_buy - num_sell <  num:
-            return apology("There are not enough assets in the account.") 
-        
         ls = lookup(request.form.get("symbol"))
+
+        
+        
         if ls:
-            mycursor.execute("SELECT * FROM symbols WHERE symbols = %s", ( ls['symbol'], ))
-            rows = mycursor.fetchall()
-            if len(rows) == 0:
-                mycursor.execute("INSERT  INTO symbols( symbols, company ) VALUES( %s, %s )",( ls['symbol'], ls['name'])  )
-                myconn.commit()
+            sym = request.form.get("symbol")
+            symbol = Symbol(symbol=sym)
+            pr = ls['price']
+            print(symbol.company, symbol.symbol, request.form.get("symbol"))
+            if symbol.company == None:
+                print("DAFDWEWFWEFWWFWEF")
+                symbol.new_symbol(symbol_name=ls['symbol'], company=ls['name'])
+            ls['price'] = usd(ls['price'])
         else:
             return apology("Not found symbol:(")
         
+        if not user.sell(symbol=symbol.symbol, qnt=num,price=pr):
+            return apology("There are not enough assets in the account.") 
         
-        # print(mycursor.execute("SELECT cash FROM users WHERE id = %s", ( session['user_id'], ))[0])
-        mycursor.execute("SELECT cash FROM users WHERE id = %s", ( session['user_id'], ))
-        wlt = float(mycursor.fetchall()[0][0])
 
-        am = int(num) * ls['price']
-
-        wlt = wlt + am
-        mycursor.execute("SELECT id FROM symbols WHERE symbols = %s", ( ls['symbol'], ))
-        symbol_id = mycursor.fetchall()[0][0]
-        mycursor.execute("""INSERT  INTO transactions( user_id, symbol_id, number, amount, date, purchase_sale )
-                    VALUES( %s, %s, %s, %s, %s, %s)""",
-                    (session['user_id'],
-                    symbol_id,
+        mycursor.execute("""INSERT  INTO transactions( user_id, symbol_id, quantity, price,  transaction_type )
+                    VALUES( %s, %s, %s, %s, %s)""",
+                    (user.id,
+                    symbol.id,
                     num,
-                    am,
-                    datetime.now(),
-                    "sell"
+                    pr,
+                    "SELL"
                     )
                     )
         myconn.commit()
 
-        mycursor.execute("UPDATE users SET cash = %s WHERE id = %s" , ( wlt, session['user_id']))
-        myconn.commit()
+        # print(mycursor.execute("SELECT cash FROM users WHERE id = %s", ( session['user_id'], ))[0])
+        
         return redirect("/")
     else:
-        mycursor.execute("SELECT DISTINCT symbols.symbols From symbols JOIN transactions WHERE transactions.user_id = %s AND symbols.id = transactions.symbol_id", 
-                        ( session['user_id'], )
-                        )
-        op = mycursor.fetchall()
+        op = [ sym for sym in user.asset.assets ]
+
         return render_template("sell.html", op_list = op)
 
 
