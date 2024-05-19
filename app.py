@@ -9,7 +9,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
 from helpers import apology, login_required, lookup, usd
 from conn_db import check_create_db
-from docker_db import start_db, stop_db
+from use_db import User, Symbol
 # Configure application
 app = Flask(__name__)
 
@@ -51,66 +51,27 @@ mycursor = myconn.cursor(buffered=True)
 def index():
     """Show portfolio of stocks"""
 
-    
-    mycursor.execute("SELECT * FROM transactions WHERE user_id = %s", (session['user_id'], ))
-    user_tr = mycursor.fetchall()
-    print(user_tr)
+    user = User(id=session['user_id'])
     ind_ls = []
-    symb_ind = dict()
-    count_symb = 0
-    for tr in user_tr:
-
-        mycursor.execute("SELECT symbols FROM symbols WHERE id = %s", ( tr[2], ) )
-        print(tr[0])
+    for tr in user.asset.assets:
         
-        symbol = mycursor.fetchall()[0][0]
-        print(symbol)
-        if not symbol in symb_ind:
-            
-            
-            
-            
-            
-            new_inf = lookup(symbol)    
-            mycursor.execute("SELECT SUM(number) FROM transactions WHERE user_id = %s AND purchase_sale = 'buy' AND symbol_id = %s",
-                            (session['user_id'],
-                            tr[2] )
-                            )
-            num_buy = mycursor.fetchall()[0][0]
-            mycursor.execute("SELECT SUM(number) FROM transactions WHERE user_id = %s AND purchase_sale = 'sell' AND symbol_id = %s",
-                                (session['user_id'],
-                                tr[2] )
-                                )
-            num_sell = mycursor.fetchall()[0][0]
-            if not num_sell:
-                num_sell = 0
-
-            num = num_buy - num_sell
-
-            
-            mycursor.execute("SELECT SUM(amount) FROM transactions WHERE symbol_id = %s AND user_id = %s ",
-                            (tr[2],
-                            session['user_id'] )
-                            )
-            am = mycursor.fetchall()[0][0]
-            new_am =float(num) * new_inf['price']
-
-            symb_ind[symbol] = count_symb
-            count_symb += 1
-            
-            if (num != 0):
-                ind_ls.append({
+        symbol = user.asset.assets[tr]['symbol']
+        new_inf = lookup(symbol.symbol)
+        num = user.asset.assets[tr]['quantity']
+        new_am = num * new_inf['price']
+        ind_ls.append({
                     'price' : usd(new_inf['price']),
-                    'amount' : usd(am),
                     "new_amount" : usd(new_am),
                     'company' : new_inf['name'],
-                    'symbol' : symbol,
-                    'number' : num
+                    'symbol' : symbol.symbol,
+                    'quantity' : num
                 })
+        
+                
             
-    mycursor.execute("SELECT cash FROM users WHERE id = %s", ( session['user_id'], ))
-    wlt = usd(mycursor.fetchall()[0][0])
-    print(wlt)
+    
+    wlt = usd(user.cash)
+    
     
     return render_template("index.html", ind_ls=ind_ls, len_ls=len(ind_ls), wlt = wlt)
 
@@ -137,42 +98,34 @@ def buy():
             return apology("Netive")
         
         ls = lookup(request.form.get("symbol"))
+        symbol = Symbol(request.form.get("symbol"))
         if ls:
-            mycursor.execute("SELECT * FROM symbols WHERE symbols = %s", (ls['symbol'], ))
-            rows = mycursor.fetchall()
-            if len(rows) == 0:
-                mycursor.execute("INSERT  INTO symbols( symbols, company ) VALUES( %s, %s )",( ls['symbol'], ls['name'] ) )
-                myconn.commit()
+            
+            if symbol.company == None:
+                symbol.new_symbol(symbol_name=ls['symbol'], company=ls['name'])
+
         else:
             return apology("Not found symbol:(")
-
-        num = request.form.get("shares")
-        mycursor.execute("SELECT cash FROM users WHERE id = %s", ( session['user_id'], ))
-        wlt = float(mycursor.fetchall()[0][0])
-
-        if int(num) * ls['price'] > wlt:
-            return apology("There are not enough funds.")
         
-        am = int(num) * ls['price']
+        user = User(id = session['user_id'])
+        num = int(request.form.get("shares"))
+        
 
-        wlt = wlt - am
-        mycursor.execute("SELECT id FROM symbols WHERE symbols = %s", ( ls['symbol'], ))
-        symbol_id = mycursor.fetchall()[0][0]
+        if num * ls['price'] > user.cash:
+            return apology("There are not enough funds.")
 
-        mycursor.execute("""INSERT  INTO transactions( user_id, symbol_id, number, amount, date, purchase_sale )
-                    VALUES( %s, %s, %s, %s, %s, %s)""",
-                    (session['user_id'],
-                    symbol_id,
+        mycursor.execute("""INSERT  INTO transactions( user_id, symbol_id, quantity, price,  transaction_type )
+                    VALUES( %s, %s, %s, %s, %s)""",
+                    (user.id,
+                    symbol.id,
                     num,
-                    am,
-                    datetime.now(),
-                    "buy"
+                    ls['price'],
+                    "BUY"
                     )
                     )
         myconn.commit()
 
-        mycursor.execute("UPDATE users SET cash = %s WHERE id = %s" ,( wlt, session['user_id']))
-        myconn.commit()
+        user.buy(symbol=symbol.symbol, qnt=num, price=ls['price'])
         return redirect("/")
     else:
         return render_template("buy.html")
@@ -185,9 +138,8 @@ def buy():
 def check():
     """Return true if username available, else false, in JSON format"""
 
-    mycursor.execute("SELECT * FROM users WHERE username = %s", (request.form.get("username"), ))
-    rows = mycursor.fetchall()
-    return jsonify(len(rows) > 0 and len(request.form.get("username")) > 1)
+    user = User(username=request.form.get("username"))
+    return jsonify(user.cash != None)
 
 
 @app.route("/history")
@@ -261,16 +213,14 @@ def login():
             return apology("must provide password")
 
         # Query database for username
-        mycursor.execute("SELECT * FROM users WHERE username = %s",
-                            ( request.form.get("username"), ))
-        rows = mycursor.fetchall()
+        user = User(username=request.form.get("username").lower())
         # Ensure username exists and password is correct
-        print(rows)
-        if len(rows) == 0 or not check_password_hash(rows[0][2], request.form.get("password")):
+        
+        if user.cash == None or not check_password_hash(user.pass_hash, request.form.get("password")):
             return apology("invalid username and/or password")
 
         # Remember which user has logged in
-        session["user_id"] = rows[0][0]
+        session["user_id"] = user.id
 
         # Redirect user to home page
         return redirect("/")
@@ -299,11 +249,13 @@ def quote():
             return apology("-_-")
         ls = lookup(request.form.get("symbol"))
         if ls:
-            mycursor.execute("SELECT * FROM symbols WHERE symbols = %s", (ls['symbol'], ))
-            rows = mycursor.fetchall()
-            if len(rows) == 0:
-                mycursor.execute("INSERT  INTO symbols( symbols, company ) VALUES( %s, %s )",( ls['symbol'], ls['name'] ))
-                myconn.commit()
+            sym = request.form.get("symbol")
+            symbol = Symbol(symbol=sym)
+            
+            print(symbol.company, symbol.symbol, request.form.get("symbol"))
+            if symbol.company == None:
+                print("DAFDWEWFWEFWWFWEF")
+                symbol.new_symbol(symbol_name=ls['symbol'], company=ls['name'])
             ls['price'] = usd(ls['price'])
 
             return render_template("quoted.html", ls = ls)
@@ -334,24 +286,19 @@ def register():
             return apology("password too small", 400)
 
 
-        mycursor.execute("SELECT * FROM users WHERE username = %s", (request.form.get("username").lower(), ))
-        rows = mycursor.fetchall()
-        print(rows)
-        if rows:
+        user = User(username=request.form.get("username").lower())
+
+        if user.cash != None:
             return apology("This username is already in use.", 400)
 
 
         hash_pass = generate_password_hash(request.form.get("password"))
 
-        mycursor.execute("INSERT INTO users (username, hash) VALUES( %s, %s )", (request.form.get("username").lower(), hash_pass) )
-        myconn.commit()
+        user.new_user(username=request.form.get("username").lower(), hash=hash_pass)
 
-        mycursor.execute("SELECT * FROM users WHERE username = %s",
-                            ( request.form.get("username"), ))
-        rows = mycursor.fetchall()
-        print(rows)
+        
         # Remember which user has logged in
-        session["user_id"] = rows[0][0]
+        session["user_id"] = user.id
 
         # Redirect user to home page
         return redirect("/")

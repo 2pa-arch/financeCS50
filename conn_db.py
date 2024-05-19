@@ -44,3 +44,6 @@ def check_create_db():
 #     rows = mycursor.fetchall()
     
 #     print(rows)
+
+if __name__ == "__main__":
+    check_create_db()
