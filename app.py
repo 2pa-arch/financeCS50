@@ -1,6 +1,5 @@
 import os
 import signal
-import mysql.connector
 from flask import Flask, flash, jsonify, redirect, render_template, request, session
 from flask_session import Session
 from tempfile import mkdtemp
@@ -36,14 +35,6 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-myconn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="my-secret-pw",
-    database="finance_db"
-)
-
-mycursor = myconn.cursor(buffered=True)
 
 
 @app.route("/")
@@ -114,16 +105,6 @@ def buy():
         if num * ls['price'] > user.cash:
             return apology("There are not enough funds.")
 
-        mycursor.execute("""INSERT  INTO transactions( user_id, symbol_id, quantity, price,  transaction_type )
-                    VALUES( %s, %s, %s, %s, %s)""",
-                    (user.id,
-                    symbol.id,
-                    num,
-                    ls['price'],
-                    "BUY"
-                    )
-                    )
-        myconn.commit()
 
         user.buy(symbol=symbol.symbol, qnt=num, price=ls['price'])
         return redirect("/")
@@ -146,43 +127,31 @@ def check():
 @login_required
 def history():
     """Show history of transactions"""
-
+    user_tr = []
+    user = User(id=session['user_id'])
     if not request.args.get("symbol") or len(request.args.get("symbol")) == 0:
-        mycursor.execute("SELECT * FROM transactions WHERE user_id = %s", (session['user_id'],) )
-        user_tr = mycursor.fetchall()
+        user_tr = user.trs.transactions
     else:
-        mycursor.execute("SELECT id FROM symbols WHERE symbols = %s", (request.args.get("symbol"), ))
-        symbol = mycursor.fetchall()[0][0]
-        mycursor.execute("SELECT * FROM transactions WHERE user_id = %s AND symbol_id = %s",
-                                (session['user_id'],
-                                symbol)
-                            )
-        user_tr = mycursor.fetchall()
+        user_tr = user.trs.get_trs_by_symbol(request.args.get("symbol"))
     ind_ls = []
     
     for tr in user_tr:
-
-        mycursor.execute("SELECT symbols, company FROM symbols WHERE id = %s", (tr[2],))
-        symbol = mycursor.fetchall()[0]
-        
-        print(symbol)
-
-        
-        num = tr[3]
+        symbol = tr['symbol']        
+        qnt = tr['quantity']
         
 
-        am = tr[4]
+        am = tr['price'] * qnt
 
 
         ind_ls.append({
-            'price' : usd(am/num),
+            'price' : usd(tr['price']),
             'amount' : usd(am),
-            "date" : tr[-2],
-            'company' : symbol[1],
-            'symbol' : symbol[0],
-            'number' : num,
-            'operation': tr[-1],
-            'id' : tr[0]
+            "date" : tr['transaction_date'],
+            'company' : symbol.company,
+            'symbol' : symbol.symbol,
+            'quantity' : int(qnt),
+            'operation': tr['transaction_type'],
+            'id' : tr['id']
         })
     
     if not request.args.get("symbol"):
@@ -351,21 +320,7 @@ def sell():
         
         if not user.sell(symbol=symbol.symbol, qnt=num,price=pr):
             return apology("There are not enough assets in the account.") 
-        
-
-        mycursor.execute("""INSERT  INTO transactions( user_id, symbol_id, quantity, price,  transaction_type )
-                    VALUES( %s, %s, %s, %s, %s)""",
-                    (user.id,
-                    symbol.id,
-                    num,
-                    pr,
-                    "SELL"
-                    )
-                    )
-        myconn.commit()
-
-        # print(mycursor.execute("SELECT cash FROM users WHERE id = %s", ( session['user_id'], ))[0])
-        
+                
         return redirect("/")
     else:
         op = [ sym for sym in user.asset.assets ]

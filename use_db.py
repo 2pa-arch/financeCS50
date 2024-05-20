@@ -64,10 +64,58 @@ class Symbol(MyDB):
         self.id, self.company = self.get_inf_for_symbol()
         return self
     
-class transactions:
-    def __init__(self, user) -> None:
-        self.user = user
-        self
+class Transaction(MyDB):
+    def __init__(self, user_id) -> None:
+        super().__init__()
+        self.user_id = user_id
+        self.transactions = self.get_inf()
+
+
+    
+    def get_inf(self):
+        self.mycursor.execute("SELECT id, symbol_id, quantity, price, transaction_date, transaction_type FROM transactions WHERE user_id = %s", ( self.user_id, ) )
+        trs = self.mycursor.fetchall()
+        res = []
+        for tr in trs:
+            res.append(
+                {
+                    'id': tr[0],
+                    'symbol': Symbol(id=tr[1]),
+                    'quantity': float(tr[2]),
+                    'price': float(tr[3]),
+                    'transaction_date': tr[4],
+                    'transaction_type': tr[5]
+                }
+            )
+
+        return res
+    
+    def get_trs_by_symbol(self,symbol_name):
+        
+        res = []
+        for tr in self.transactions:
+            if tr['symbol'].symbol == symbol_name:
+                res.append(tr)
+        
+        return res
+    
+    
+    
+
+    def new_transaction(self, symbol, quantity, price, transaction_type):
+        
+        self.mycursor.execute("""INSERT  INTO transactions( user_id, symbol_id, quantity, price,  transaction_type )
+                    VALUES( %s, %s, %s, %s, %s)""",
+                    (self.user_id,
+                    symbol.id,
+                    quantity,
+                    price,
+                    transaction_type
+                    )
+                    )
+        self.myconn.commit()
+        self.transactions = self.get_inf()
+
 
 class UserAssets(MyDB):
 
@@ -117,9 +165,9 @@ class UserAssets(MyDB):
     
     def pop_symb(self, symbol, qnt):
         
-        
+        print(symbol.symbol, self.assets)
         if symbol.symbol in self.assets:
-
+            print(self.assets[symbol.symbol]['quantity'] , qnt,symbol.symbol )
             if self.assets[symbol.symbol]['quantity'] < qnt:
                 return False
             elif self.assets[symbol.symbol]['quantity'] == qnt:
@@ -156,6 +204,7 @@ class User(MyDB):
         if self.cash != None:
             self.cash = float(self.cash)
         self.asset = UserAssets(self.id)
+        self.trs = Transaction(user_id=self.id)
     
     def get_inf_for_id(self):
         self.mycursor.execute("SELECT username, cash, hash, current_balance FROM users WHERE user_id = %s", ( self.id, ) )
@@ -186,11 +235,15 @@ class User(MyDB):
         self.mycursor.execute("UPDATE  users SET cash = %s  WHERE user_id = %s", (self.cash, self.id) )
 
         self.myconn.commit()
-        return self.asset.add_symb(Symbol(symbol=symbol), qnt=qnt)
+        self.asset.add_symb(Symbol(symbol=symbol), qnt=qnt)
+        
+        self.trs.new_transaction(symbol=Symbol(symbol=symbol), quantity=qnt, price=price,transaction_type="BUY")
+        return True
     
     def sell(self, symbol, qnt, price):
-        
-        if self.asset.pop_symb(Symbol(symbol=symbol), qnt=qnt):
+        res = self.asset.pop_symb(Symbol(symbol=symbol), qnt=qnt)
+        if res:
+            self.trs.new_transaction(symbol=Symbol(symbol=symbol), quantity=qnt, price=price,transaction_type="SELL")
             self.cash += price * qnt
             self.mycursor.execute("UPDATE  users SET cash = %s  WHERE user_id = %s", (self.cash, self.id) )
         
@@ -209,13 +262,13 @@ class User(MyDB):
 
 
 if __name__ == "__main__":
-    x = User(username="kek")
-    y = Symbol(symbol= "ZZZ")
+    x = User(username="lol")
+    # y = Symbol(symbol= "ZZZ")
 
-    print(y.id, y.company, y.symbol)
+    # print(y.id, y.company, y.symbol)
     # x.select_inf("users")
 
-    # print(x.id, x.cash, x.username, x.asset.assets)
+    print(x.id, x.cash, x.username, x.asset.assets, x.trs.transactions)
     # x.new_user("kek", "scrypt:32768:8:1$a3QLEJq1k39JltHB$fa4a58365759c479720ea21897b37c390064140e115a7d1d66ffcd2cdbc1dd3a4b8aead0ff2dccd298501eb7bc45a82db794d49e79a51d48cbc008344031ed74")
     # print(x.id, x.cash, x.username, x.asset.assets)
 

@@ -36,8 +36,9 @@ def start_db():
             volumes=volumes,
             detach=True
         )
-    except:
+    except Exception as ex:
         print('OOps, mb db alredy start')
+        print(ex)
         return
 
 
