@@ -4,7 +4,6 @@ PATH_TO_FILE = "create_db.sql"
 
 
 def check_create_db():
-    print("AAAAAAA")
     mydb = mysql.connector.connect(
         host="localhost",
         user="root",
@@ -27,23 +26,6 @@ def check_create_db():
 
     mydb.commit()
     mydb.close()
-
-# if __name__ == "__main__":
-
-#     mydb = mysql.connector.connect(
-#         host="localhost",
-#         user="root",
-#         password="my-secret-pw",
-#         database="finance_db"
-#     )
-
-#     mycursor = mydb.cursor()
-#     username = "kek"
-#     mycursor.execute("SELECT * FROM users WHERE username = %s",
-#                             ( username, ))
-#     rows = mycursor.fetchall()
-    
-#     print(rows)
 
 if __name__ == "__main__":
     check_create_db()

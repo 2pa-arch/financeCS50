@@ -7,10 +7,10 @@ import docker.models.containers
 from conn_db import check_create_db
 
 
-
-# Define the container parameters
+# Визначення параметрів контейнера
+# Define the container parameters 
 def start_db():
-    print("AAAAAABBBB")
+    print("******Start******")
     client = docker.from_env()
     password_mq = "my-secret-pw"
     container_name = 'mysql-financedb'
@@ -21,11 +21,13 @@ def start_db():
             'bind': '/var/lib/mysql',
             'mode': 'rw'
         }
-    }
+    } # Відображення томів для збереження даних
 
+    # Завантаження образу Docker для MySQL
     # Pull the MySQL Docker image
     client.images.pull('mysql')
 
+    # Створення контейнера
     # Create the container
     try:
         container = client.containers.run(
@@ -45,12 +47,15 @@ def start_db():
 
     print(f'Container {container.name} started successfully.')
     try:
-        check_create_db()
+        check_create_db() # Перевірка і створення бази даних
     except:
-        time.sleep(10)
+        time.sleep(20) # Затримка перед повторною перевіркою
         check_create_db()
-    return container.id
+    return container.id # Повернення ідентифікатора контейнера
 
+
+# Зупинка контейнера
+# Stop the container
 def stop_db(container_id):
     client = docker.from_env()
 
@@ -68,19 +73,23 @@ def stop_db(container_id):
         print('OOps, mb db alredy remove')
 
 
-
+# Основна функція
+# Main function
 if __name__ == "__main__":
     
     arg = sys.argv[1].strip()
     
     if arg == "stop":
-        
+        # Зупинка контейнера, якщо аргумент дорівнює "stop"
+        # Stop the container if the argument is "stop"
         client = docker.from_env()
         for con in client.containers.list(all=True):
             if con.name == "mysql-financedb":
                 stop_db(container_id=con.id)
                 break
     elif arg == "start":
+        # Запуск контейнера, якщо аргумент дорівнює "start"
+        # Start the container if the argument is "start"
         start_db()
     else:
         print("-_-")
