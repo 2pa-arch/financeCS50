@@ -1,11 +1,7 @@
 import requests
 import urllib.parse
-import uuid
 from flask import redirect, render_template, request, session
 from functools import wraps
-import os
-from datetime import datetime
-import pytz
 
 def apology(message, code=400):
     """Render message as an apology to user."""
@@ -54,19 +50,26 @@ def lookup(symbol):
     except requests.RequestException:
         return None
     
+    res = dict()
     # Parse response
     try:
         quote1 = response1.json()
-        quote2 = response2.json()
-        return {
+        res = {
             "name": quote1['quotes'][0]['longname'],
-            "price": float(quote2['chart']['result'][0]['meta']['regularMarketPrice']),
             "symbol": quote1['quotes'][0]['symbol']
         }
-    except (KeyError, TypeError, ValueError):
-        print(response1)
+    except (KeyError, TypeError, ValueError, IndexError):
+        print(response1.json())
         return None
-
+    
+    try:
+        quote2 = response2.json()
+        res["price"] =  float(quote2['chart']['result'][0]['meta']['regularMarketPrice'])
+    except (KeyError, TypeError, ValueError, IndexError):
+        print(response2.json())
+        return None
+    
+    return res
 
 def usd(value):
     """Format value as USD."""
