@@ -43,11 +43,13 @@ def index():
 
     user = User(id=session['user_id'])
     ind_ls = []
+    tot = 0
     for tr in user.asset.assets:
         symbol = user.asset.assets[tr]['symbol']
         new_inf = lookup(symbol.symbol)
         num = user.asset.assets[tr]['quantity']
         new_am = num * new_inf['price']
+        tot += new_inf['price']
         ind_ls.append({
             'price': usd(new_inf['price']),
             "new_amount": usd(new_am),
@@ -57,7 +59,9 @@ def index():
         })
 
     wlt = usd(user.cash)
-    return render_template("index.html", ind_ls=ind_ls, len_ls=len(ind_ls), wlt=wlt)
+    tot += user.cash
+
+    return render_template("index.html", ind_ls=ind_ls, len_ls=len(ind_ls), wlt=wlt, tot=tot)
 
 @app.route("/buy", methods=["GET", "POST"])
 @login_required

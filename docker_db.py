@@ -25,8 +25,10 @@ def start_db():
 
     # Завантаження образу Docker для MySQL
     # Pull the MySQL Docker image
-    client.images.pull('mysql')
-
+    try:
+        client.images.pull('mysql')
+    except:
+        pass
     # Створення контейнера
     # Create the container
     try:
@@ -41,7 +43,24 @@ def start_db():
     except Exception as ex:
         print('OOps, mb db alredy start')
         print(ex)
-        return
+        if str(ex).split()[0] == '409':
+            for con in client.containers.list(all=True):
+                if con.name == "mysql-financedb":
+                    stop_db(container_id=con.id)
+                    break
+            try:
+                container = client.containers.run(
+                'mysql',
+                name=container_name,
+                ports=port_mapping,
+                environment=environment,
+                volumes=volumes,
+                detach=True
+            )
+            except Exception as ex:
+                print('Oops')
+                return
+        
 
 
 

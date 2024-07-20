@@ -10,7 +10,18 @@ class MyDB():
             password="my-secret-pw",
             database="finance_db"
         )
-        self.mycursor = self.myconn.cursor(buffered=True)
+        self.mycursor = self.myconn.cursor()
+
+    def __del__(self):
+        if self.myconn.is_connected():
+            self.mycursor.close()
+            
+            self.myconn.close()
+            
+
+        del self.myconn
+        del self.mycursor
+
 
 # Клас для представлення символу (активу) та роботи з ним
 # Class to represent a symbol (asset) and interact with it
@@ -171,6 +182,9 @@ class User(MyDB):
 
     def __init__(self, username=None, id=None) -> None:
         super().__init__()
+        self.cash = None
+        self.id = id
+        self.username = username
         if username is not None:
             self.username = username
             self.id, self.cash, self.pass_hash, self.current_balance = self.get_inf_for_username()
